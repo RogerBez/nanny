@@ -2,7 +2,7 @@
 /**
  * POST /score
  * Analyze and score messages for threat level
- * Returns risk score, level, and detected flags
+ * Returns risk score, level, detected flags, flagged status, and explanation
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.router = void 0;
@@ -13,10 +13,10 @@ const auditLogger_1 = require("../utils/auditLogger");
 const router = (0, express_1.Router)();
 exports.router = router;
 /**
- * POST /score
+ * POST / (mounted at /score)
  * Score an encrypted message for threat level
  */
-router.post('/score', (req, res) => {
+router.post('/', (req, res) => {
     try {
         const { childId, encryptedPayload, messageId } = req.body;
         // Validate request
@@ -62,18 +62,22 @@ router.post('/score', (req, res) => {
         });
         // Check if auto-freeze should be triggered
         const triggerAutoFreeze = (0, slangScorer_1.shouldAutoFreeze)(scoringResult.score);
+        const isFlagged = scoringResult.score >= 50; // Flag messages with score >= 50
+        const explanation = (0, slangScorer_1.getRiskExplanation)(scoringResult.score);
         if (process.env.NODE_ENV !== 'production') {
-            console.log(`[SCORE] Message scored: ${scoringResult.score} (${scoringResult.riskLevel})`);
+            console.log(`[SCORE] Message scored: ${scoringResult.score} (${scoringResult.riskLevel}), flagged: ${isFlagged}`);
             if (triggerAutoFreeze) {
                 console.log(`[AUTO-FREEZE] Critical threat detected for child ${childId}`);
             }
         }
-        // Return success response
+        // Return success response with flagged status and explanation
         return res.status(200).json({
             status: 'success',
             score: scoringResult.score,
             riskLevel: scoringResult.riskLevel,
+            flagged: isFlagged,
             flags: scoringResult.flags,
+            explanation,
             messageId: actualMessageId,
         });
     }

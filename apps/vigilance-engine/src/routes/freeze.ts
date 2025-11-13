@@ -1,6 +1,8 @@
 /**
- * POST /freeze
+ * POST / (mounted at /freeze)
  * Freeze a child account due to high-risk activity
+ * GET /:childId to check freeze status
+ * POST /unfreeze to unfreeze
  */
 
 import { Router, Request, Response } from 'express';
@@ -13,18 +15,18 @@ const router = Router();
 const freezeStore: FreezeStore = {};
 
 /**
- * POST /freeze
+ * POST /
  * Freeze a child account
  */
-router.post('/freeze', (req: Request, res: Response) => {
+router.post('/', (req: Request, res: Response) => {
   try {
     const { childId, parentId, reason, duration } = req.body as FreezeRequest;
 
     // Validate request
-    if (!childId || !parentId || !reason) {
+    if (!childId) {
       return res.status(400).json({
         status: 'error',
-        error: 'Missing required fields: childId, parentId, reason',
+        error: 'Missing required fields: childId',
       } as FreezeResponse);
     }
 
@@ -32,9 +34,9 @@ router.post('/freeze', (req: Request, res: Response) => {
     const timestamp = Date.now();
     freezeStore[childId] = {
       frozen: true,
-      reason,
+      reason: reason || 'Frozen by parent',
       timestamp,
-      parentId,
+      parentId: parentId || 'system',
     };
 
     // Log audit event
@@ -42,27 +44,28 @@ router.post('/freeze', (req: Request, res: Response) => {
       id: `freeze_${childId}_${timestamp}`,
       action: 'freeze',
       childId,
-      parentId,
-      reason,
+      parentId: parentId || 'system',
+      reason: reason || 'Frozen by parent',
       timestamp,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
     });
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[FREEZE] Child ${childId} frozen by parent ${parentId}. Reason: ${reason}`);
+      console.log(`[FREEZE] Child ${childId} frozen. Reason: ${reason || 'No reason provided'}`);
     }
 
     // Return success response
-    return res.status(200).json({
+    const resp = {
       status: 'success',
       frozen: true,
       childId,
-      reason,
+      reason: reason || 'Frozen by parent',
       timestamp,
-    } as FreezeResponse);
+    } as unknown as FreezeResponse;
+    return res.status(200).json(resp);
   } catch (error) {
-    console.error('Error in /freeze:', error);
+    console.error('Error in POST /freeze:', error);
     return res.status(500).json({
       status: 'error',
       error: 'Internal server error',
@@ -71,18 +74,18 @@ router.post('/freeze', (req: Request, res: Response) => {
 });
 
 /**
- * GET /freeze/:childId
+ * GET /:childId
  * Check if a child account is frozen
  */
-router.get('/freeze/:childId', (req: Request, res: Response) => {
+router.get('/:childId', (req: Request, res: Response) => {
   try {
     const { childId } = req.params;
 
     const freezeData = freezeStore[childId];
-    if (freezeData) {
+    if (freezeData && freezeData.frozen) {
       return res.status(200).json({
         status: 'success',
-        frozen: freezeData.frozen,
+        frozen: true,
         childId,
         reason: freezeData.reason,
         timestamp: freezeData.timestamp,
@@ -95,7 +98,7 @@ router.get('/freeze/:childId', (req: Request, res: Response) => {
       childId,
     });
   } catch (error) {
-    console.error('Error in GET /freeze:', error);
+    console.error('Error in GET /:childId:', error);
     return res.status(500).json({
       status: 'error',
       error: 'Internal server error',
@@ -109,13 +112,13 @@ router.get('/freeze/:childId', (req: Request, res: Response) => {
  */
 router.post('/unfreeze', (req: Request, res: Response) => {
   try {
-    const { childId, parentId } = req.body as { childId: string; parentId: string };
+    const { childId, parentId } = req.body as { childId: string; parentId?: string };
 
     // Validate request
-    if (!childId || !parentId) {
+    if (!childId) {
       return res.status(400).json({
         status: 'error',
-        error: 'Missing required fields: childId, parentId',
+        error: 'Missing required fields: childId',
       });
     }
 
@@ -125,7 +128,7 @@ router.post('/unfreeze', (req: Request, res: Response) => {
       frozen: false,
       reason: 'Unfrozen',
       timestamp,
-      parentId,
+      parentId: parentId || 'system',
     };
 
     // Log audit event
@@ -133,18 +136,18 @@ router.post('/unfreeze', (req: Request, res: Response) => {
       id: `unfreeze_${childId}_${timestamp}`,
       action: 'unfreeze',
       childId,
-      parentId,
+      parentId: parentId || 'system',
       timestamp,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
     });
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[UNFREEZE] Child ${childId} unfrozen by parent ${parentId}`);
+      console.log(`[UNFREEZE] Child ${childId} unfrozen`);
     }
 
     return res.status(200).json({
-      status: 'success',
+      status: 'unfrozen',
       frozen: false,
       childId,
     });
@@ -157,4 +160,5 @@ router.post('/unfreeze', (req: Request, res: Response) => {
   }
 });
 
+// Export router and store for testing
 export { router, freezeStore };

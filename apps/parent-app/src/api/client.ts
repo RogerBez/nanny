@@ -19,7 +19,7 @@ import {
 
 // ===== Configuration =====
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8080";
 const API_TIMEOUT = 10000; // 10 seconds
 
 // ===== Mock Data for Development =====

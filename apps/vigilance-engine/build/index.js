@@ -49,7 +49,7 @@ const ingest_1 = require("./routes/ingest");
 const score_1 = require("./routes/score");
 const freeze_1 = require("./routes/freeze");
 const app = (0, express_1.default)();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 // ============ MIDDLEWARE ============
 // Body parser middleware
@@ -81,12 +81,10 @@ app.get('/health', (req, res) => {
         environment: NODE_ENV,
     });
 });
-// API Routes
-app.post('/ingest', ingest_1.router);
-app.post('/score', score_1.router);
-app.post('/freeze', freeze_1.router);
-app.get('/freeze/:childId', freeze_1.router);
-app.post('/unfreeze', freeze_1.router);
+// API Routes - mount routers at base paths
+app.use('/ingest', ingest_1.router);
+app.use('/score', score_1.router);
+app.use('/freeze', freeze_1.router);
 // ============ ERROR HANDLING ============
 // 404 handler
 app.use((req, res) => {

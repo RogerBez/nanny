@@ -1,0 +1,70 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      # Backend - Vigilance Engine
+      - name: Install backend dependencies
+        run: cd apps/vigilance-engine && npm install
+
+      - name: Lint backend code
+        run: cd apps/vigilance-engine && npm run lint
+        continue-on-error: true
+
+      - name: Build backend
+        run: cd apps/vigilance-engine && npm run build
+
+      - name: Test backend
+        run: cd apps/vigilance-engine && npm test
+
+      # Parent App
+      - name: Install parent app dependencies
+        run: cd apps/parent-app && npm install
+
+      - name: Lint parent app
+        run: cd apps/parent-app && npm run lint
+        continue-on-error: true
+
+      - name: Test parent app
+        run: cd apps/parent-app && npm test
+
+      # Child App
+      - name: Install child app dependencies
+        run: cd apps/child-app && npm install
+
+      - name: Lint child app
+        run: cd apps/child-app && npm run lint
+        continue-on-error: true
+
+      # Shared Types
+      - name: Validate shared types
+        run: cd apps/shared && npm run build
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true

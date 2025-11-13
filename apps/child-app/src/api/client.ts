@@ -16,7 +16,7 @@ import encryptionService from "../utils/encryptionService";
 
 // ===== Configuration =====
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8080";
 const API_TIMEOUT = 10000; // 10 seconds
 
 // ===== API Client Class =====
@@ -92,6 +92,7 @@ class ApiClient {
   /**
    * Send message to backend with encryption
    * Encrypts message content before transmission
+   * POST /ingest endpoint
    */
   async sendMessage(
     message: MessageSendRequest
@@ -124,19 +125,15 @@ class ApiClient {
         throw new Error("Invalid encrypted payload");
       }
 
-      // 4. Create encrypted message
-      const encryptedMessage: EncryptedMessage = {
-        messageId: encryptionService.generateMessageId(),
-        childId: this.childId,
-        encryptedPayload,
-        deviceId: this.deviceId,
-        timestamp: Date.now(),
-      };
-
-      // 5. Send to backend
+      // 4. Send to backend - POST /ingest
+      // Expected request body: { childId, encryptedPayload, deviceId }
       const response = await this.request<MessageSendResponse>("/ingest", {
         method: "POST",
-        body: JSON.stringify(encryptedMessage),
+        body: JSON.stringify({
+          childId: this.childId,
+          encryptedPayload,
+          deviceId: this.deviceId,
+        }),
       });
 
       console.log("[ChildApiClient] Message sent successfully");

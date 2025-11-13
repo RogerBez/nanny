@@ -1,6 +1,6 @@
 "use strict";
 /**
- * POST /ingest
+ * POST / (mounted at /ingest)
  * Receive encrypted message payloads from child app
  * Decrypt and store in memory for processing
  */
@@ -15,10 +15,10 @@ exports.router = router;
 const messageStore = {};
 exports.messageStore = messageStore;
 /**
- * POST /ingest
+ * POST /
  * Accept encrypted message from child app
  */
-router.post('/ingest', (req, res) => {
+router.post('/', (req, res) => {
     try {
         const { childId, encryptedPayload, deviceId } = req.body;
         // Validate request
@@ -67,10 +67,11 @@ router.post('/ingest', (req, res) => {
             userAgent: req.get('user-agent'),
         });
         // Return success response
-        return res.status(200).json({
+        const resp = {
             status: 'success',
             messageId,
-        });
+        };
+        return res.status(200).json(resp);
     }
     catch (error) {
         console.error('Error in /ingest:', error);

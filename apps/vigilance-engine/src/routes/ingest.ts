@@ -1,5 +1,5 @@
 /**
- * POST /ingest
+ * POST / (mounted at /ingest)
  * Receive encrypted message payloads from child app
  * Decrypt and store in memory for processing
  */
@@ -15,10 +15,10 @@ const router = Router();
 const messageStore: MessageStore = {};
 
 /**
- * POST /ingest
+ * POST /
  * Accept encrypted message from child app
  */
-router.post('/ingest', (req: Request, res: Response) => {
+router.post('/', (req: Request, res: Response) => {
   try {
     const { childId, encryptedPayload, deviceId } = req.body as IngestRequest;
 
@@ -73,10 +73,11 @@ router.post('/ingest', (req: Request, res: Response) => {
     });
 
     // Return success response
-    return res.status(200).json({
+    const resp = {
       status: 'success',
       messageId,
-    } as IngestResponse);
+    } as unknown as IngestResponse;
+    return res.status(200).json(resp);
   } catch (error) {
     console.error('Error in /ingest:', error);
     return res.status(500).json({

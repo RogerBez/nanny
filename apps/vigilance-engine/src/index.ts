@@ -15,7 +15,7 @@ import { router as scoreRouter } from './routes/score';
 import { router as freezeRouter } from './routes/freeze';
 
 const app: Express = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // ============ MIDDLEWARE ============
@@ -56,12 +56,10 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// API Routes
-app.post('/ingest', ingestRouter);
-app.post('/score', scoreRouter);
-app.post('/freeze', freezeRouter);
-app.get('/freeze/:childId', freezeRouter);
-app.post('/unfreeze', freezeRouter);
+// API Routes - mount routers at base paths
+app.use('/ingest', ingestRouter);
+app.use('/score', scoreRouter);
+app.use('/freeze', freezeRouter);
 
 // ============ ERROR HANDLING ============
 
